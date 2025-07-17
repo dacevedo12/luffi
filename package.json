@@ -1,0 +1,47 @@
+{
+  "name": "luffi",
+  "version": "0.1.0",
+  "description": "Universal FFI for server-side JavaScript",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "demo:bun": "bun demo.ts",
+    "demo:deno": "deno --allow-ffi demo.ts",
+    "demo:node": "node --experimental-strip-types demo.ts",
+    "lint": "tsc --noEmit",
+    "prepare": "npm run build",
+    "test:bun": "bun test src/*.test.ts",
+    "test:deno": "deno test --allow-ffi --no-check src/*.test.ts",
+    "test:node": "node --experimental-strip-types --test 'src/*.test.ts'",
+    "test": "npm run test:bun && npm run test:deno && npm run test:node"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://gitlab.com/dacevedo/luffi.git"
+  },
+  "type": "module",
+  "keywords": [
+    "bun",
+    "deno",
+    "ffi",
+    "node"
+  ],
+  "author": "https://gitlab.com/dacevedo",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://gitlab.com/dacevedo/luffi/issues"
+  },
+  "homepage": "https://gitlab.com/dacevedo/luffi#readme",
+  "dependencies": {
+    "@cross/runtime": "npm:@jsr/cross__runtime@^1.2.1",
+    "@cross/test": "npm:@jsr/cross__test@^0.0.10",
+    "@std/assert": "npm:@jsr/std__assert@^1.0.13",
+    "koffi": "^2.12.1"
+  },
+  "devDependencies": {
+    "@types/bun": "1.2.13",
+    "@types/deno": "2.3.0",
+    "@types/node": "22.15.18",
+    "typescript": "5.8.3"
+  }
+}
