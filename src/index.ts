@@ -1,5 +1,5 @@
-import { type FFIBackend } from './types.ts';
 import { CurrentRuntime, Runtime } from "@cross/runtime";
+import { FFIBackend } from "./types.ts";
 
 export async function getFFIBackend(): Promise<FFIBackend> {
     switch (CurrentRuntime) {

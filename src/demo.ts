@@ -1,5 +1,5 @@
 import { CurrentOS, OperatingSystem } from "@cross/runtime";
-import { luffi } from "./src/index.ts";
+import { luffi } from "./index.ts";
 
 function getSystemLibrary(): string {
     switch (CurrentOS) {

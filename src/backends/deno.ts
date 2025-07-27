@@ -1,7 +1,14 @@
-import type { FFIBackend, FFISymbol, CType, BaseType, ForeignFunction, FFILibrary } from '../types.ts';
-import { types } from '../types.ts';
+import type {
+  CType,
+  FFIBackend,
+  FFILibrary,
+  FFISymbol,
+  ForeignFunction,
+  NativeObject,
+} from "../types.ts";
+import { types } from "../types.ts";
 
-const TYPE_MAP: Record<BaseType, Deno.NativeResultType> = {
+const TYPE_MAP: Record<CType, Deno.NativeType | Deno.NativeVoidType> = {
   bool: "bool",
   char: "i8",
   double: "f64",
@@ -28,41 +35,53 @@ const TYPE_MAP: Record<BaseType, Deno.NativeResultType> = {
   unsignedShort: "u16",
   void: "void",
   wcharT: "u16",
-}
+};
 
-function mapType(type: CType): Deno.NativeType {
-  if (type.endsWith('*')) {
-    return "buffer";
+function mapType(type: CType | NativeObject): Deno.NativeResultType {
+  if (typeof type === "string") {
+    return TYPE_MAP[type];
   }
-  return TYPE_MAP[type as BaseType] as Deno.NativeType;
+  return type.native;
 }
 
 export const DenoBackend: FFIBackend = {
-  dlopen: <T extends Record<string, FFISymbol>>(path: string, symbols: T): FFILibrary<T> => {
-    const denoSymbols = Object.entries(symbols).reduce((acc, [name, symbol]) => ({
-      ...acc,
-      [name]: {
-        parameters: symbol.parameters.map(mapType),
+  dlopen: <T extends Record<string, FFISymbol>>(
+    path: string,
+    symbols: T,
+  ): FFILibrary<T> => {
+    const denoSymbols = Object.entries(symbols).reduce<
+      Record<string, Deno.ForeignFunction>
+    >((acc, [name, symbol]) => {
+      const denoSymbol = {
+        parameters: symbol.parameters.map(mapType).filter((param) =>
+          param !== "void"
+        ),
         result: mapType(symbol.result),
-      }
-    }), {} as Record<string, Deno.ForeignFunction>);
+      };
+
+      return { ...acc, [name]: denoSymbol };
+    }, {});
+
     const library = Deno.dlopen(path, denoSymbols);
 
     // Wrap each function to handle string parameters
-    const luffiSymbols = Object.entries(library.symbols).reduce((acc, [name, symbol]) => {
-      return {
-        ...acc,
-        [name]: (...args: any[]) => {
-          const mappedArgs = args.map((arg) => {
-            if (typeof arg === "string") {
-              return new TextEncoder().encode(arg + '\0');
-            }
-            return arg;
-          });
-          return symbol(...mappedArgs);
-        }
-      };
-    }, {} as Record<keyof T, ForeignFunction>);
+    const luffiSymbols = Object.entries(library.symbols).reduce(
+      (acc, [name, symbol]) => {
+        return {
+          ...acc,
+          [name]: (...args: any[]) => {
+            const mappedArgs = args.map((arg) => {
+              if (typeof arg === "string") {
+                return new TextEncoder().encode(arg + "\0");
+              }
+              return arg;
+            });
+            return symbol(...mappedArgs);
+          },
+        };
+      },
+      {} as Record<keyof T, ForeignFunction>,
+    );
 
     return {
       symbols: luffiSymbols,
@@ -70,7 +89,19 @@ export const DenoBackend: FFIBackend = {
     };
   },
 
-  pointer: (type: BaseType) => `${type}*`,
+  out: (type) => ({ native: type }),
+
+  pointer: () => ({ native: "buffer" }),
+
+  struct: (definition) => {
+    return {
+      native: {
+        struct: definition.map(([, type]) => mapType(type)).filter((type) =>
+          type !== "void"
+        ),
+      },
+    };
+  },
 
   types,
-}; 
+};

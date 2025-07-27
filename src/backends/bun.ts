@@ -1,9 +1,9 @@
-import type { FFIBackend, FFISymbol, CType, BaseType, ForeignFunction, FFILibrary } from '../types.ts';
+import type { FFIBackend, FFISymbol, CType, ForeignFunction, FFILibrary, NativeObject } from '../types.ts';
 import { FFIFunction, FFIType, dlopen } from "bun:ffi";
 import { Buffer } from 'node:buffer';
 import { types } from '../types.ts';
 
-const TYPE_MAP: Record<BaseType, FFIType> = {
+const TYPE_MAP: Record<CType, FFIType> = {
     bool: FFIType.bool,
     char: FFIType.char,
     double: FFIType.double,
@@ -32,15 +32,11 @@ const TYPE_MAP: Record<BaseType, FFIType> = {
     wcharT: FFIType.u16,
 }
 
-function mapType(type: CType): FFIType {
-    if (type.endsWith('*')) {
-        return FFIType.ptr;
+function mapType(type: CType | NativeObject): FFIType {
+    if (typeof type === "string") {
+        return TYPE_MAP[type]
     }
-    const mappedType = TYPE_MAP[type as BaseType];
-    if (!mappedType) {
-        throw new Error(`Unsupported type: ${type}`);
-    }
-    return mappedType;
+    return type.native;
 }
 
 
@@ -78,7 +74,13 @@ export const BunBackend: FFIBackend = {
         };
     },
 
-    pointer: (type: BaseType) => `${type}*`,
+    out: (type) => ({ native: type}),
+
+    pointer: () => ({ native: FFIType.pointer }),
+
+    struct: () => {
+        throw new Error("Bun FFI doesn't support 'struct' types. https://github.com/oven-sh/bun/issues/6139");
+    },
 
     types,
 }; 

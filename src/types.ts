@@ -30,8 +30,10 @@ export const types = {
     wcharT: "wcharT",
 } as const;
 
-export type BaseType = keyof typeof types;
-export type CType = BaseType | `${BaseType}*`;
+export type CType = keyof typeof types;
+
+// Pointers, structs and other runtime-specific objects
+export type NativeObject = { native: any };
 
 export type ForeignFunction = (...args: any[]) => any;
 
@@ -40,9 +42,9 @@ export type ForeignFunction = (...args: any[]) => any;
  */
 export interface FFISymbol {
     /** Return type of the function */
-    result: CType;
+    result: CType | NativeObject;
     /** Parameter types of the function */
-    parameters: CType[];
+    parameters: (CType | NativeObject)[];
 }
 
 
@@ -66,7 +68,17 @@ export interface FFIBackend {
     dlopen<T extends Record<string, FFISymbol>>(path: string, symbols: T): FFILibrary<T>;
 
     /**
+     * Create an out parameter type
+     */
+    out(type: CType | NativeObject): NativeObject;
+
+    /**
      * Create a pointer type
      */
-    pointer(type: BaseType): `${BaseType}*`;
+    pointer(type: CType | NativeObject): NativeObject;
+
+    /**
+     * Create a struct type
+     */
+    struct(definition: [string, CType | NativeObject][]): NativeObject;
 }
